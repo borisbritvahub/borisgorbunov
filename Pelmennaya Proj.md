@@ -1,21 +1,23 @@
 # Pelmennaya Project
-## _Проект развертывания магазина по продаже пельменей._
-Репозиторий CI/CD сборка приложения:
+ _Проект развертывания магазина по продаже пельменей в лучшем облачном сервисе России - YANDEX CLOUD.
+ 
+ 
+## Репозиторий CI/CD сборка приложения:
 - https://gitlab.praktikum-services.ru/std-009-076/pelmennaya
 
-Репозиторий инфраструктуры: 
+## Репозиторий инфраструктуры: 
 - https://gitlab.praktikum-services.ru/std-009-076/pelmennaya_infrastructure
 
-ArgoCD:
+## ArgoCD:
 - https://argo.24momo.ru
 
-Grafana:
+## Grafana:
 - https://gf.24momo.ru
 
-Prometheus:
+## Prometheus:
 - https://pm.24momo.ru
 
-## Структура програмного репозитория 
+## Структура програмного репозитория branch:main
 
 pelmennaya
 ├── backend               ## Код фронтенд с файлом сборки контейнера 
@@ -27,12 +29,11 @@ pelmennaya
 │   ├── nginx-frontend.conf  
 ├── .gitignore
 └── .gitlab-ci.yml 
+--------------------------------
 
-## Структура инфраструктурного репозитория 
+## Структура инфраструктурного репозитория branch:main
 
 pelmennaya_infrastructure
-
---------------------------------
 
 ## Helm Charts ArgoCD
 
@@ -47,7 +48,7 @@ pelmennaya_infrastructure
 │   └── secrets  
 │       └── json-secret-iu.yaml
 
-Helm Chart для разворачивания приложения.
+Helm Chart для деплоя приложения.
 Используется AplicationSet манифестами для загрузки данных из репозиториев.
 ----------------------------
 # Helm Charts приложения в GitLab
@@ -96,7 +97,7 @@ Helm Chart для разворачивания приложения.
 │   │           └── services.yaml
 
 ## Сбор Метрик
- -  Prometheus
+ -  PROMETHEUS
 
 │   └── prometheus
 │       ├── cert
@@ -108,7 +109,7 @@ Helm Chart для разворачивания приложения.
 │       │   └── services.yaml
 │       └── RBAC.yaml
 
-## Certificate Manager 
+## Certificate Manager и SecretStore
 
 Certificates
 ├── SecretStore.sh 
@@ -128,42 +129,69 @@ Certificates
 -----------------------------------
 
 ## Подготовка инфраструктуры:
+1. Скачайте и установите терраформ:
 
-1. Ключ сервисного аккаунта
+- https://releases.hashicorp.com/terraform/1.4.2/terraform_1.4.2_darwin_amd64.zip
 
-Создайте авторизованный  для созданного сервисного аккаунта (k8s-bgorbunov)  Сохраните его в файл. 
+Разархивируйте и перенесите бинарные файлы в нужный каталог:
+```bash
+sudo mv ~/Downloads/terraform /usr/local/bin/
+```
+
+2. Ключ сервисного аккаунта
+Чтобы управлять инфраструктурой Yandex Cloud с помощью Terraform, используйте сервисный аккаунт!
+Если у вас еще нет то создайте его :
+
+```bash
+yc iam service-account create --name sa-acc
+```
+
+Прверка:
+
+```bash
+yc iam service-account list
+```
+
+Результат:
+
+|          ID          |       NAME       |   DESCRIPTION   |
+| --------------------- | ------------------ | -----------------|
+| aje6o61dvog2h6g9a33s | my-robot         | my description  |
+
+Добавьте роль editor для расширенных прав.
+
+```bash
+yc resource-manager folder add-access-binding my-folder \
+  --role editor \
+  --subject serviceAccount:aje6o61dvog2h6g9a33s
+```
+
+Где
+- aje6o61dvog2h6g9a33s - ID сервисного аккаунта
+-  editor - роль сервисного аккаунта
+
+  
+Создайте авторизованный ключ для созданного сервисного аккаунта. Сохраните его в файл. Он понадобится для работы с Терраформ.
 
 ```bash
 yc iam key create \
-  --service-account-name k8s-bgorbunov \
-  --output authorized-key.json
+  --service-account-name sa-acc \
+  --output key.json
 ```
+где 
+- sa-acc имя вашего сервисного аккаунта.
 
-Развертывание кластера кубернетес.
-Манифесты
-- Путь: pelmennaya_infrastructure/terraform/kubernetes
-
-kubernetes.tf
+3. Развертывание кластера кубернетес.
+Манифесты 
 - Манифест для развёртывания Кубернетес (аннотации в файле)
 
-var.tf
+Путь: pelmennaya_infrastructure/terraform/kubernetes/kubernetes.tf
+
 - Переменные для кластера Кубернетес
 
+Путь: pelmennaya_infrastructure/terraform/kubernetes/var.tf
+
 ---------------------------
-
-
-
-
-Установите Ingress-контроллер NGINX с помощью Helm-чарта.
-Установите менеджер сертификатов.
-Создайте объекты.
-Настройте DNS-запись для Ingress-контроллера.
-Проверьте работоспособность TLS.
-
-
-
-
-
 
 ## Добавление DNS  зоны
 
@@ -190,7 +218,6 @@ yc dns zone list
 |          ID          |                    NAME                    |       ZONE       |          VISIBILITY          | 
 |----------------------|--------------------------------------------|------------------|------------------------------|
 | dns103fe510re3b5tn6f | momo-dnszone                               | 24momo.ru.       | PUBLIC                       | 
-
 
 --------------------------------
 
@@ -294,26 +321,42 @@ kubectl --namespace "Namespace_Name" create secret generic yc-auth \
  - "Namespace_Name" - неймспейс системы управления секретами
 
 ## Создайте хранилище секретов (SecretStore) secret-store, содержащее секрет yc-auth:
-
-- sh /pelmennaya_infrastructure/Certificates/secretstore.sh 
-
-
-
-## Проверьте, что права назначены:
- 
- ```bash
- yc cm certificate list-access-bindings --id  "ID сертификата"
+```bash
+sudo ./pelmennaya_infrastructure/Certificates/secretstore.sh 
 ```
 
- - Пример вывода
+## Создайте объекты ExternalSecret external-secret, указывающий на сертификат из Certificate Manager:
 
-| ROLE ID |  SUBJECT TYPE | SUBJECT ID  |
-| ------- |------------------------------- | ---------------------- |
-| certificate-manager.certificates.downloader | serviceAccount | ajehu3kpdgs1763jee58 |
+External Secret для сайта магазина 24momo.ru 
+ ```bash
+sudo ./pelmennaya_infrastructure/Certificates/pelmennaya-store.sh
+ ```
+External Secret для сайта Argo CD — декларативный GitOps-инструмент непрерывной доставки (continuous delivery) для Kubernetes
+ ```bash
+sudo ./pelmennaya_infrastructure/Certificates/argocd-cert.sh 
+ ```
+External Secret для сайта мониторинга Grafana — свободная программная система визуализации данных, ориентированная на данные систем ИТ-мониторинга.
+ ```bash
+sudo ./pelmennaya_infrastructure/Certificates/grafana-ext-secrets.sh
+ ```
+External Secret для сайта Prometheus - записывает метрики в реальном времени в базу данных временных рядов.
+ ```bash
+sudo ./pelmennaya_infrastructure/Certificates/argocd-cert.sh
+ ```
 
 
+## kubectl get es -n argocd
 
+| NAME |                   STORE    |      REFRESH INTERVAL |  STATUS   |      READY|
+| --- |                   ---    |    --- |  ---   |     --- |
+|external-secret   |     secret-store |  1h       |          SecretSynced  | True|
+momo-external-secret  | secret-store  | 1h            |     SecretSynced  | True|
 
+##  kubectl get es -n monitoring
+| NAME |                   STORE    |      REFRESH INTERVAL |  STATUS   |      READY|
+| --- |                   ---    |    --- |  ---   |     --- |
+|gf-external-secret |  secret-store |  1h   |              SecretSynced |  True | 
+|pf-external-secret |  secret-store  | 1h    |             SecretSynced |  True|
 
 
 
@@ -353,10 +396,6 @@ Argocd Image Updater — инструмент для автоматическо�
 Добавить предварительно Pull Secret для работы с Registry GitLab:
 
 /pelmennaya_infrastructure/argo-image-updater/secrets/json-secret-iu.yaml
-
-
-
-
 
 
 
