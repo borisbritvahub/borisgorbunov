@@ -111,11 +111,11 @@ Helm Chart для разворачивания приложения.
 ## Certificate Manager 
 
 Certificates
+├── SecretStore.sh 
 ├── argocd-cert.sh
 ├── grafana-ext-secrets.sh
 ├── pelmennaya-store.sh
 └── prometheus.sh
-
 
 ## Манифесты Кубернетес
 └── terraform
@@ -128,6 +128,17 @@ Certificates
 -----------------------------------
 
 ## Подготовка инфраструктуры:
+
+1. Ключ сервисного аккаунта
+
+Создайте авторизованный  для созданного сервисного аккаунта (k8s-bgorbunov)  Сохраните его в файл. 
+
+```bash
+yc iam key create \
+  --service-account-name k8s-bgorbunov \
+  --output authorized-key.json
+```
+
 Развертывание кластера кубернетес.
 Манифесты
 - Путь: pelmennaya_infrastructure/terraform/kubernetes
@@ -191,7 +202,7 @@ yc dns zone list
 
 1. Ключ сервисного аккаунта
 
-Создайте авторизованный ключ для ранее созданного сервисного аккаунта (k8s-bgorbunov) или создайте новый.  Сохраните его в файл. Он нам понадобится для создания "ExternalSecret*"
+Используйте авторизованный ключ для ранее созданного сервисного аккаунта (k8s-bgorbunov) или создайте новый.  Сохраните его в файл. Он нам понадобится для создания "ExternalSecret*"
 
 _*External Secrets Operator — это оператор Kubernetes, который интегрирует внешние системы управления секретами._
 
@@ -212,6 +223,8 @@ yc cm certificate add-access-binding \
 
 3. Добавление запроса на создание сертификатов
 
+Пример:
+
 ```bash
 yc certificate-manager certificate request \
   --name momo-cert \
@@ -220,6 +233,38 @@ yc certificate-manager certificate request \
 Где:
 - name — имя сертификата.
 - domains — домены сертификатов.
+
+Добавьте все небходимые сертификаты для доменов
+- 24momo.ru
+- argo.24momo.ru
+- pm.24momo.ru
+- gf.24momo.ru
+
+
+## Вывод списка сертификатов
+
+```bash
+yc cm certificate list
+```
+
+| ID | NAME | DOMAINS| NOT AFTER | TYPE | STATUS |
+| ------ | ------ | ------ | ------ | ------ | ------ |
+| fpq0i5ulhtblldahkp6b | momo-cert      | 24momo.ru      | 2023-06-02 08:25:35 | MANAGED | ISSUED |
+| fpqd425u24lfrmemo2gi | argo-24momo-ru | argo.24momo.ru | 2023-06-10 20:53:46 | MANAGED | ISSUED |
+| fpqd991d3h8vhqqgt66p | pm-24momo-ru   | pm.24momo.ru   | 2023-06-12 07:51:43 | MANAGED | ISSUED |
+| fpqtea62d0ljseluiae8 | gf-24momo-ru   | gf.24momo.ru   | 2023-06-12 07:48:30 | MANAGED | ISSUED |
+
+
+## Проверьте, что права сервисному аккаунту назначены:
+ 
+ ```bash
+ yc cm certificate list-access-bindings --id  "ID сертификата"
+```
+ - Пример вывода
+
+| ROLE ID |  SUBJECT TYPE | SUBJECT ID  |
+| ------- |------------------------------- | ---------------------- |
+| certificate-manager.certificates.downloader | serviceAccount | ajehu3kpdgs1763jee58 |
 
 
 --------------------
@@ -248,45 +293,9 @@ kubectl --namespace "Namespace_Name" create secret generic yc-auth \
  - authorized-key.json - ваш ключь
  - "Namespace_Name" - неймспейс системы управления секретами
 
-
 ## Создайте хранилище секретов (SecretStore) secret-store, содержащее секрет yc-auth:
 
-kubectl --namespace ns apply -f - <<< '
-apiVersion: external-secrets.io/v1beta1
-kind: SecretStore
-metadata:
-  name: secret-store
-spec:
-  provider:
-    yandexcertificatemanager:
-      auth:
-        authorizedKeySecretRef:
-          name: yc-auth
-          key: authorized-key'
-
-
-
-
-
-
-
-
-
-
-
-
-## Вывод списка сертификатов
-
-```bash
-yc cm certificate list
-```
-
-| ID | NAME | DOMAINS| NOT AFTER | TYPE | STATUS |
-| ------ | ------ | ------ | ------ | ------ | ------ |
-| fpq0i5ulhtblldahkp6b | momo-cert      | 24momo.ru      | 2023-06-02 08:25:35 | MANAGED | ISSUED |
-| fpqd425u24lfrmemo2gi | argo-24momo-ru | argo.24momo.ru | 2023-06-10 20:53:46 | MANAGED | ISSUED |
-| fpqd991d3h8vhqqgt66p | pm-24momo-ru   | pm.24momo.ru   | 2023-06-12 07:51:43 | MANAGED | ISSUED |
-| fpqtea62d0ljseluiae8 | gf-24momo-ru   | gf.24momo.ru   | 2023-06-12 07:48:30 | MANAGED | ISSUED |
+- sh /pelmennaya_infrastructure/Certificates/secretstore.sh 
 
 
 
@@ -304,6 +313,11 @@ yc cm certificate list
 
 
 
+
+
+
+
+
 ## Ingress-контроллер NGINX NLB
 ```bash
 helm repo add ingress-nginx https://kubernetes.github.io/ingress-nginx && \
@@ -312,14 +326,6 @@ helm install ingress-nginx ingress-nginx/ingress-nginx
 # Нзначение ранее зарезервированного статического loadBalancerIP
 kubectl patch svc ingress-nginx-lb -p '{"spec": {"loadBalancerIP": "Ранне созданный IP адресс"}}'
 ```
-
-
-
-
-
-
-
-
 
 
 
