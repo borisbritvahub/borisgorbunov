@@ -108,11 +108,13 @@ Helm Chart для разворачивания приложения.
 │       │   └── services.yaml
 │       └── RBAC.yaml
 
-## Файлы разыертывания Load Balancer | Certificate Manager 
+## Certificate Manager 
 
-├── NLB
-│   ├── Certificate Manager
-│   └── Install Network Load Balancer Yandex
+Certificates
+├── argocd-cert.sh
+├── grafana-ext-secrets.sh
+├── pelmennaya-store.sh
+└── prometheus.sh
 
 
 ## Манифесты Кубернетес
@@ -143,8 +145,18 @@ var.tf
 
 ## Certificates:
 
+Добавьте Helm-репозиторий external-secrets:
 
+```bash
+helm repo add external-secrets https://charts.external-secrets.io
+```
 
+Установите External Secrets Operator в кластер Kubernetes:
+
+helm install external-secrets \
+  external-secrets/external-secrets \
+  --namespace external-secrets \
+  --create-namespace
 
 
 ```bash
@@ -160,19 +172,31 @@ yc cm certificate list
 
 
 
-
-
-
-
-
-
-
-Bind cert to SA account
-
+## Назначение права SA account на управление сертификатами
+ ```bash
 yc cm certificate add-access-binding \
   --id fpqtea62d0ljseluiae8 \
   --service-account-name k8s-bgorbunov \
   --role certificate-manager.certificates.downloader
+```
+
+## Проверьте, что права назначены:
+ 
+ ```bash
+ yc cm certificate list-access-bindings --id  "ID сертификата"
+```
+ - Пример вывода
+
+| ROLE ID |  SUBJECT TYPE | SUBJECT ID  |
+| ------- |------------------------------- | ---------------------- |
+| certificate-manager.certificates.downloader | serviceAccount | ajehu3kpdgs1763jee58 |
+
+
+
+
+
+## 
+
 
 
 
