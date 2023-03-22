@@ -143,21 +143,139 @@ var.tf
 
 
 
-## Certificates:
+Установите Ingress-контроллер NGINX с помощью Helm-чарта.
+Установите менеджер сертификатов.
+Создайте объекты.
+Настройте DNS-запись для Ingress-контроллера.
+Проверьте работоспособность TLS.
 
-Добавьте Helm-репозиторий external-secrets:
+
+
+
+
+
+## Добавление DNS  зоны
+
+```bash
+yc dns zone create --name momo-dnszone  --zone www.24momo.ru. --public-visibility
+```
+
+_Результат:_
+
+```bash
+id: aet2q4fn8i8icfug97p0
+folder_id: aoerb349v3h4bupphtaf
+created_at: "2021-03-03T19:07:08.685Z"
+name: momo-dnszone 
+zone: www.24momo.ru.
+public_visibility: {}
+```
+_Вывод команды_
+
+```bash
+yc dns zone list
+```
+
+|          ID          |                    NAME                    |       ZONE       |          VISIBILITY          | 
+|----------------------|--------------------------------------------|------------------|------------------------------|
+| dns103fe510re3b5tn6f | momo-dnszone                               | 24momo.ru.       | PUBLIC                       | 
+
+
+--------------------------------
+
+
+
+
+
+## Добавление сертификатов домена:
+
+1. Ключ сервисного аккаунта
+
+Создайте авторизованный ключ для ранее созданного сервисного аккаунта (k8s-bgorbunov) или создайте новый.  Сохраните его в файл. Он нам понадобится для создания "ExternalSecret*"
+
+_*External Secrets Operator — это оператор Kubernetes, который интегрирует внешние системы управления секретами._
+
+```bash
+yc iam key create \
+  --service-account-name k8s-bgorbunov \
+  --output authorized-key.json
+```
+
+
+2. Назначение права SA account на управление сертификатами
+ ```bash
+yc cm certificate add-access-binding \
+  --id fpqtea62d0ljseluiae8 \
+  --service-account-name k8s-bgorbunov \
+  --role certificate-manager.certificates.downloader
+```
+
+3. Добавление запроса на создание сертификатов
+
+```bash
+yc certificate-manager certificate request \
+  --name momo-cert \
+  --domains 24momo.ru
+```
+Где:
+- name — имя сертификата.
+- domains — домены сертификатов.
+
+
+--------------------
+
+## External Secrets
+
+1. Добавьте Helm-репозиторий external-secrets:
 
 ```bash
 helm repo add external-secrets https://charts.external-secrets.io
 ```
-
-Установите External Secrets Operator в кластер Kubernetes:
-
+2. Установите External Secrets Operator в кластер Kubernetes:
+```bash
 helm install external-secrets \
   external-secrets/external-secrets \
   --namespace external-secrets \
   --create-namespace
+```
 
+## Создайте секрет yc-auth, содержащий в себе ключ сервисного аккаунта k8s-bgorbunov:
+```bash
+kubectl --namespace "Namespace_Name" create secret generic yc-auth \
+  --from-file=authorized-key=authorized-key.json
+```
+Где
+ - authorized-key.json - ваш ключь
+ - "Namespace_Name" - неймспейс системы управления секретами
+
+
+## Создайте хранилище секретов (SecretStore) secret-store, содержащее секрет yc-auth:
+
+kubectl --namespace ns apply -f - <<< '
+apiVersion: external-secrets.io/v1beta1
+kind: SecretStore
+metadata:
+  name: secret-store
+spec:
+  provider:
+    yandexcertificatemanager:
+      auth:
+        authorizedKeySecretRef:
+          name: yc-auth
+          key: authorized-key'
+
+
+
+
+
+
+
+
+
+
+
+
+## Вывод списка сертификатов
 
 ```bash
 yc cm certificate list
@@ -172,35 +290,17 @@ yc cm certificate list
 
 
 
-## Назначение права SA account на управление сертификатами
- ```bash
-yc cm certificate add-access-binding \
-  --id fpqtea62d0ljseluiae8 \
-  --service-account-name k8s-bgorbunov \
-  --role certificate-manager.certificates.downloader
-```
-
 ## Проверьте, что права назначены:
  
  ```bash
  yc cm certificate list-access-bindings --id  "ID сертификата"
 ```
+
  - Пример вывода
 
 | ROLE ID |  SUBJECT TYPE | SUBJECT ID  |
 | ------- |------------------------------- | ---------------------- |
 | certificate-manager.certificates.downloader | serviceAccount | ajehu3kpdgs1763jee58 |
-
-
-
-
-
-## 
-
-
-
-
-
 
 
 
