@@ -19,6 +19,7 @@
 
 ## Структура програмного репозитория branch:main
 
+```bash
 pelmennaya
 ├── backend               ## Код фронтенд с файлом сборки контейнера 
 │   ├── Dockerfile  
@@ -29,14 +30,18 @@ pelmennaya
 │   ├── nginx-frontend.conf  
 ├── .gitignore
 └── .gitlab-ci.yml 
+```
+
 --------------------------------
 
 ## Структура инфраструктурного репозитория branch:main
 
-pelmennaya_infrastructure
+
 
 ## Helm Charts ArgoCD
 
+
+```bash
 ├── argo
 │   ├── acme-issuer.yaml
 │   └── argo-ingress.yaml    ## Ingress Conrtroller для  Argocd 
@@ -47,12 +52,13 @@ pelmennaya_infrastructure
 │   │   └── secret-gitlab-image-updater.yaml  
 │   └── secrets  
 │       └── json-secret-iu.yaml
+```
 
-Helm Chart для деплоя приложения.
-Используется AplicationSet манифестами для загрузки данных из репозиториев.
 ----------------------------
 # Helm Charts приложения в GitLab
-
+ - Helm Chart для деплоя приложения.
+ - Используется AplicationSet манифестами для загрузки данных из репозиториев.
+```bash
 ├── momo-store-helm-charts    
 │   ├── .argocd-source-momo-store-helm-charts.yaml
 │   ├── charts
@@ -77,10 +83,12 @@ Helm Chart для деплоя приложения.
 │   ├── Chart.yaml
 │   ├── core-install.yaml
 │   └── values.yaml
+```
 
 ## Мониторинг
 - GRAFANA
 
+```bash
 ├── monitoring
 │   ├── grafana
 │   │   └── gf-helm-charts
@@ -95,10 +103,12 @@ Helm Chart для деплоя приложения.
 │   │           ├── ingress.yaml
 │   │           ├── pvc.yaml
 │   │           └── services.yaml
+```
 
 ## Сбор Метрик
  -  PROMETHEUS
-
+ -  
+```bash
 │   └── prometheus
 │       ├── cert
 │       │   └── pm-cert.yaml
@@ -108,23 +118,27 @@ Helm Chart для деплоя приложения.
 │       │   ├── ingress.yaml
 │       │   └── services.yaml
 │       └── RBAC.yaml
+```
 
 ## Certificate Manager и SecretStore
-
+```bash
 Certificates
 ├── SecretStore.sh 
 ├── argocd-cert.sh
 ├── grafana-ext-secrets.sh
 ├── pelmennaya-store.sh
 └── prometheus.sh
+```
 
 ## Манифесты Кубернетес
+
+```bash
 └── terraform
     ├── kubernetes
     │   ├── kubernetes.tf
     │   └── var.tf
     └── Диаграмма без названия.drawio
-
+```
 
 -----------------------------------
 
